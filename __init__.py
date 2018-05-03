@@ -3,52 +3,62 @@ from flask import Flask, request, flash, redirect, render_template, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask, jsonify
 import requests
-from . import db, list
+# from . import db, list
+
+#
+app = Flask(__name__)
+db = SQLAlchemy()
+
+
+class info(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100))
+    reponame = db.Column(db.String(100))
 
 
 def create_app(test_config=None):
 
-    app = Flask(__name__,instance_relative_config=True)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
-    db = SQLAlchemy(app)
+    global app,db
 
-    class info(db.Model):
-        id = db.Column('id', db.Integer, primary_key=True)
-        username = db.Column(db.String(100))
-        reponame = db.Column(db.String(100))
+    POSTGRES = {
+        'user': 'areeb_dev',
+        'pw': 'pass',
+        'db': 'areeb_dev',
+        'host': 'localhost',
+        'port': '5432',
+    }
 
-        def __init__(self, name, repo):
-            self.username = name
-            self.reponame = repo
+    app.config['DEBUG'] = True
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%(user)s:\
+    %(pw)s@%(host)s:%(port)s/%(db)s' % POSTGRES
+    db.init_app(app)
+    app.config['SECRET_KEY'] = "secret"
 
-    @app.route('/hello')
-    def hello():
-        return 'Hello, World!'
+    @app.route("/hello")
+    def main():
+        return 'Hello World !'
 
-    app.register_blueprint(list.bp)
-    app.add_url_rule('/', endpoint='index')
+    @app.route('/')
+    def show_all():
+        return render_template('index.html', posts=info.query.all())
 
-    db.create_all()
+    @app.route('/new', methods=['GET', 'POST'])
+    def new():
 
-    return app
+        if request.method == 'POST':
+            u = info(username=request.form['name'], reponame=request.form['repo'])
 
+            db.session.add(u)
+            db.session.commit()
 
-@app.route('/')
-def show_all():
-   return render_template('list/index.html', posts = info.query.all() )
+            flash('Record was successfully added')
+            return redirect(url_for('show_all'))
 
+        return render_template('new.html')
 
-@app.route('/new', methods=['GET', 'POST'])
-def new():
+    @app.route('/repo/<name>', methods=['GET'])
+    def detail(name):
 
-    if request.method == 'POST':
+        if request.method == 'GET':
+            return render_template('detail.html', rows=info.query.filter_by(username=name))
 
-        u = info(request.form['name'], request.form['repo'])
-
-        db.session.add(u)
-        db.session.commit()
-
-        flash('Record was successfully added')
-        return redirect(url_for('list/index.html'))
-
-    return render_template('list/new.html')

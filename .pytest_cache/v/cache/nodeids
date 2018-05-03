@@ -1,0 +1,6 @@
+[
+  "test_app.py::test_conn",
+  "test_app.py::test_ping",
+  "test_app.py::test_name_presence",
+  "test_app.py::test_return_size"
+]
